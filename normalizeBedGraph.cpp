@@ -5,14 +5,14 @@
  * Author: Zachary Maas <zama8258@colorado.edu>
  * Maintainer: Zachary Maas <zama8258@colorado.edu>
  * Created: Wed Aug 21 13:38:37 2019 (-0600)
- * Version: 0.1.0
- * URL: TODO
+ * Version: 1.0.0
+ * URL: https://github.com/Dowell-Lab/normalizeBedGraph
  *
  */
 
 /* Commentary:
  *
- * Quickly normalize a bedGraph file using TPM normalization.
+ * Quickly normalize a bedGraph file using TPM.
  *
  */
 
@@ -69,13 +69,13 @@ int main(int argc, char *argv[]) {
         itemSize++;
       }
       if (itemSize < 4) {
-				std::cerr << "Malformed entry on line " << currLine << std::endl;
+        std::cerr << "Malformed entry on line " << currLine << std::endl;
         return -1;
       }
       currLine++;
-      unsigned long start = std::stoul(items[1]);
-      unsigned long stop = std::stoul(items[2]);
-      unsigned long reads = std::stoul(items[3]);
+      const unsigned long start = std::stoul(items[1]);
+      const unsigned long stop = std::stoul(items[2]);
+      const unsigned long reads = std::stoul(items[3]);
       unsigned long length = stop - start;
 
       // Must account for single bp regions
@@ -89,6 +89,9 @@ int main(int argc, char *argv[]) {
     // Reset to start of file
     bedGraph.clear();
     bedGraph.seekg(0, std::ios::beg);
+    double tpmSum = 0;
+
+		// Normalize and print out
     while (std::getline(bedGraph, line)) {
       // Split each line
       std::istringstream lineItems(line);
@@ -103,13 +106,25 @@ int main(int argc, char *argv[]) {
         return -1;
       }
       std::string chr = items[0];
-      unsigned long start = std::stoul(items[1]);
-      unsigned long stop = std::stoul(items[2]);
-      float tpm = stof(items[3]) / float(sum);
+      const unsigned long start = std::stoul(items[1]);
+      const unsigned long stop = std::stoul(items[2]);
+      unsigned long length = stop - start;
+
+      // Must account for single bp regions
+      if (length <= 2) {
+        length = 1;
+      }
+
+      // Calculate tpm value
+      float tpm = 10e6 * ((stof(items[3]) / float(length)) / float(sum));
+      tpmSum += tpm;
       std::cout << chr << "\t" << start << "\t" << stop << "\t" << tpm << "\n";
     }
-  } else {
-    std::cout << "Cannot open file." << std::endl;
+    if (std::fabs(1e7 - tpmSum) > 10) {
+      std::cerr << "Higher than expected error in sum of tpm values.\n";
+      std::cerr << "Sum of TPM Values: " << tpmSum << "\n";
+      std::cerr << "Distance from 1e7: " << 1e7 - tpmSum << "\n";
+    }
   }
 
   bedGraph.close();
