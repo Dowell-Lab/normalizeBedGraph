@@ -1,5 +1,6 @@
-CXX=clang++
-CXXFLAGS=-Wall -Werror -march=native -O2 -flto --std=c++11
+CXX ?= clang++
+CXXFLAGS := ${CXXFLAGS}
+CXXFLAGS += -Wall -Werror -march=native -O2 -flto --std=c++11 -static
 
 default: normalizeBedGraph
 
